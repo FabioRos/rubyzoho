@@ -48,7 +48,7 @@ class RubyZoho::Crm
 
     h = RubyZoho.configuration.api.find_records(
         #self.module_name, ApiUtils.string_to_symbol(attrs[0]), conditions[0], args[0]
-        self.module_name, ApiUtils.string_to_symbol(attrs[0]), conditions[0], ApiUtils.sanitize_string(args[0])
+        self.module_name, ApiUtils.string_to_symbol(attrs[0]), conditions[0], args[0]
     )
     return h.collect { |r| new(r) } unless h.nil?
     nil

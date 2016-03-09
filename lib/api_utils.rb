@@ -11,9 +11,6 @@ module ApiUtils
   end
 
   def self.string_to_symbol(st)
-
-
-
     st.gsub!(/[()%]*/, '')
     st.gsub(' ', '_').downcase.to_sym
   end
@@ -22,8 +19,4 @@ module ApiUtils
     sym.class == Symbol ? self.camelize_with_space(sym.to_s) : self.camelize_with_space(sym)
   end
 
-  def self.sanitize_string(st)
-   # debugger if st.match(/[\W+]/) #matvh se trova almeno un carattere speciale
-    st
-  end
 end

@@ -13,23 +13,7 @@ module ZohoApiFieldUtils
   end
 
   def adjust_tag_case(tag, module_name)
-    #debugger
     return tag if tag == 'id'
-
-    # return "Interesse Newsletter" if tag == 'interesse_newsletter'
-    # return "Iniziative Newsletter" if tag == 'iniziative_newsletter'
-    # return "Contenuti Newsletter" if tag == 'contenuti_newsletter'
-    # return "First Name" if tag == 'first_name'
-    # return "Last Name" if tag == 'last_name'
-    # return "Email" if tag =='email'
-    # return "Company" if tag =='company'
-    # return "Account Name" if tag =='account_name'
-    # return "Rating" if tag == 'rating'
-    # return "Mailing State" if tag == 'mailing_state'
-    # return "Iscritto A Newsletter" if tag == 'iscritto_a_newsletter'
-    # return "Facebook" if tag == 'facebook'
-    # return "Linkedin" if tag == 'linkedin'
-    # return "Twitter"  if tag == 'twitter'
 
     return tag.upcase if tag.downcase.rindex('id')
     u_tags = %w[SEMODULE]
