@@ -12,10 +12,7 @@ module ZohoApiFinders
   def find_record_by_field(module_name, sc_field, condition, value)
     field = sc_field.rindex('id') ? sc_field.downcase : sc_field
     search_condition = "(#{field}:#{value})"
-    r = self.class.get(create_url("#{module_name}", 'searchRecords'),
-                       :query => { :newFormat => 1, :authtoken => @auth_token, :scope => 'crmapi',
-                                   :selectColumns => 'All', :criteria => search_condition,
-                                   :fromIndex => 1, :toIndex => NUMBER_OF_RECORDS_TO_GET })
+    r = self.class.get(create_url("#{module_name}", 'searchRecords'),                       :query => { :newFormat => 1, :authtoken => @auth_token, :scope => 'crmapi', :selectColumns => 'All', :criteria => search_condition,                                   :fromIndex => 1, :toIndex => NUMBER_OF_RECORDS_TO_GET })
     check_for_errors(r)
     x = REXML::Document.new(r.body).elements.to_a("/response/result/#{module_name}/row")
     to_hash(x, module_name)

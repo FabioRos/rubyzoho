@@ -57,10 +57,11 @@ module CrudMethods
   end
 
   def save
-    h = {}
-    @fields.each { |f| h.merge!({ f => eval("self.#{f.to_s}") }) }
-    h.delete_if { |k, v| v.nil? }
-    r = RubyZoho.configuration.api.add_record(self.class.module_name, h)
+    _h = {}
+    @fields.each { |f| _h.merge!({ f => eval("self.#{f.to_s}") }) }
+    _h.delete_if { |k, v| v.nil? }
+    #debugger
+    r = RubyZoho.configuration.api.add_record(self.class.module_name, _h)
     up_date(r)
   end
 
