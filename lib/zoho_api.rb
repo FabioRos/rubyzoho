@@ -164,18 +164,24 @@ module ZohoApi
     end
 
     def update_record(module_name, id, fields_values_hash)
-      x = REXML::Document.new
-      contacts = x.add_element module_name
-      row = contacts.add_element 'row', {'no' => '1'}
-      fields_values_hash.each_pair { |k, v| add_field(row, k, v, module_name) }
-      r = self.class.post(create_url(module_name, 'updateRecords'),
-                          :query => {:newFormat => 1, :authtoken => @auth_token,
-                                     :scope => 'crmapi', :id => id,
-                                     :xmlData => x, :wfTrigger => 'true'},
-                          :headers => {'Content-length' => '0'})
-      check_for_errors(r)
-      x_r = REXML::Document.new(r.body).elements.to_a('//recorddetail')
-      to_hash_with_id(x_r, module_name)[0]
+      begin
+        x = REXML::Document.new
+        contacts = x.add_element module_name
+        row = contacts.add_element 'row', {'no' => '1'}
+        fields_values_hash.each_pair { |k, v| add_field(row, k, v, module_name) }
+        r = self.class.post(create_url(module_name, 'updateRecords'),
+                            :query => {:newFormat => 1, :authtoken => @auth_token,
+                                       :scope => 'crmapi', :id => id,
+                                       :xmlData => x, :wfTrigger => 'true'},
+                            :headers => {'Content-length' => '0'})
+        check_for_errors(r)
+        x_r = REXML::Document.new(r.body).elements.to_a('//recorddetail')
+        to_hash_with_id(x_r, module_name)[0]
+      rescue SystemCallError => e
+        Airbrake.notify(e)
+      rescue RuntimeError => e
+        puts "AGGIORNAMENTO FALLITO!"
+      end
     end
 
     def users(user_type = 'AllUsers')

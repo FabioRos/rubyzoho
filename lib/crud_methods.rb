@@ -30,11 +30,18 @@ module CrudMethods
     end
 
     def update(object_attribute_hash)
-      raise(RuntimeError, 'No ID found', object_attribute_hash.to_s) if object_attribute_hash[:id].nil?
-      id = object_attribute_hash[:id]
-      object_attribute_hash.delete(:id)
-      r = RubyZoho.configuration.api.update_record(self.module_name, id, object_attribute_hash)
-      new(object_attribute_hash.merge!(r))
+      begin
+        raise(RuntimeError, 'No ID found', object_attribute_hash.to_s) if object_attribute_hash[:id].nil?
+        id = object_attribute_hash[:id]
+        object_attribute_hash.delete(:id)
+        r = RubyZoho.configuration.api.update_record(self.module_name, id, object_attribute_hash)
+        new(object_attribute_hash.merge!(r)) unless r.nil?
+      rescue SystemCallError => e
+        Airbrake.notify(e)
+      rescue RuntimeError => e
+        puts "AGGIORNAMENTO FALLITO!"
+      end
+
     end
 
     def update_related(object_attribute_hash)
@@ -57,12 +64,15 @@ module CrudMethods
   end
 
   def save
-    _h = {}
-    @fields.each { |f| _h.merge!({ f => eval("self.#{f.to_s}") }) }
-    _h.delete_if { |k, v| v.nil? }
-    #debugger
-    r = RubyZoho.configuration.api.add_record(self.class.module_name, _h)
-    up_date(r)
+    begin
+      _h = {}
+      @fields.each { |f| _h.merge!({ f => eval("self.#{f.to_s}") }) }
+      _h.delete_if { |k, v| v.nil? }
+      r = RubyZoho.configuration.api.add_record(self.class.module_name, _h)
+      up_date(r)
+    rescue SystemCallError => e
+      Airbrake.notify(e)
+    end
   end
 
   def save_object(object)
