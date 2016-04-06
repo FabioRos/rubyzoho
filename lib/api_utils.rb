@@ -24,6 +24,6 @@ module ApiUtils
 
   def self.sanitize_string(st)
    # debugger if st.match(/[\W+]/) #matvh se trova almeno un carattere speciale
-    st
+    st.gsub(/[^0-9A-Za-z]/, '')
   end
 end

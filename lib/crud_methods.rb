@@ -36,6 +36,16 @@ module CrudMethods
         object_attribute_hash.delete(:id)
         r = RubyZoho.configuration.api.update_record(self.module_name, id, object_attribute_hash)
         new(object_attribute_hash.merge!(r)) unless r.nil?
+
+
+        content_to_log = object_attribute_hash[:email] rescue nil?
+        if content_to_log.nil?
+          content_to_log ||= object_attribute_hash[:account_name] rescue 'no content'
+        end
+
+
+
+
       rescue SystemCallError => e
         Airbrake.notify(e)
       rescue RuntimeError => e
@@ -45,11 +55,18 @@ module CrudMethods
     end
 
     def update_related(object_attribute_hash)
-      raise(RuntimeError, 'No ID found', object_attribute_hash.to_s) if object_attribute_hash[:id].nil?
-      id = object_attribute_hash[:id]
-      object_attribute_hash.delete(:id)
-      RubyZoho.configuration.api.update_related_records(self.module_name, id, object_attribute_hash)
-      find(id)
+       begin
+        raise(RuntimeError, 'No ID found', object_attribute_hash.to_s) if object_attribute_hash[:id].nil?
+        id = object_attribute_hash[:id]
+        object_attribute_hash.delete(:id)
+
+        RubyZoho.configuration.api.update_related_records(self.module_name, id, object_attribute_hash)
+        find(id)
+      rescue SystemCallError => e
+        Airbrake.notify(e)
+      rescue RuntimeError => e
+        puts "AGGIORNAMENTO FALLITO!"
+      end
     end
 
   end
@@ -64,23 +81,41 @@ module CrudMethods
   end
 
   def save
+
+
+    content_to_log = 'no content'
+
     begin
       _h = {}
-      @fields.each { |f| _h.merge!({ f => eval("self.#{f.to_s}") }) }
+      @fields.each { |f| _h.merge!({ f => eval("self.#{f.to_s}") })
+
+       }
+
+
       _h.delete_if { |k, v| v.nil? }
       r = RubyZoho.configuration.api.add_record(self.class.module_name, _h)
       up_date(r)
+
     rescue SystemCallError => e
       Airbrake.notify(e)
+    rescue RuntimeError => e
+      puts "AGGIORNAMENTO FALLITO!"
     end
   end
 
   def save_object(object)
-    h = {}
+    begin
+
+      h = {}
     object.fields.each { |f| h.merge!({ f => object.send(f) }) }
     h.delete_if { |k, v| v.nil? }
     r = RubyZoho.configuration.api.add_record(object.module_name, h)
     up_date(r)
+    rescue SystemCallError => e
+      Airbrake.notify(e)
+    rescue RuntimeError => e
+      puts "AGGIORNAMENTO FALLITO!"
+    end
   end
 
   def up_date(object_attribute_hash)
