@@ -64,6 +64,7 @@
 
       def mass_update(arr)
           arr.each_slice(100) do |slice|
+            logger.info slice
             # convert each to field values hash
             RubyZoho.configuration.api.bulk_update(self.module_name, slice)
           end
