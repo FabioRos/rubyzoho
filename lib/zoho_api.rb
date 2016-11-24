@@ -13,7 +13,6 @@ require 'zoho_api_finders'
 
 module ZohoApi
 
-
   include ApiUtils
 
   class Crm
@@ -38,13 +37,54 @@ module ZohoApi
       element = x.add_element module_name
       row = element.add_element 'row', {'no' => '1'}
       fields_values_hash.each_pair { |k, v| add_field(row, k, v, module_name) }
-      #debugger
       r = self.class.post(create_url(module_name, 'insertRecords'),
-                          :query => {:newFormat => 1, :authtoken => @auth_token, :scope => 'crmapi', :xmlData => x, :wfTrigger => 'true'},
+                          :query => {:newFormat => 1, :authtoken => @auth_token,
+                                     :scope => 'crmapi', :xmlData => x, :wfTrigger => 'true'},
                           :headers => {'Content-length' => '0'})
       check_for_errors(r)
       x_r = REXML::Document.new(r.body).elements.to_a('//recorddetail')
       to_hash(x_r, module_name)[0]
+    end
+
+    def bulk_insert(module_name, records)
+      x = REXML::Document.new
+      element = x.add_element module_name
+
+      records.each_with_index do |fields_values_hash, index|
+        row = element.add_element 'row', {'no' => "#{index + 1}"}
+        fields_values_hash.each_pair { |k, v| add_field(row, k, v, module_name) }
+      end
+
+      r = self.class.post(create_url(module_name, 'insertRecords'),
+                          :query => {:newFormat => 1, :authtoken => @auth_token,
+                                     :scope => 'crmapi', :xmlData => x, :wfTrigger => 'true'},
+                          :headers => {'Content-length' => '0'})
+      check_for_errors(r)
+      x_r = REXML::Document.new(r.body).elements.to_a('//recorddetail')
+      to_hash(x_r, module_name)[0]
+    end
+
+    def bulk_update(module_name, records)
+      x = REXML::Document.new
+      element = x.add_element module_name
+
+      records.each_with_index do |fields_values_hash, index|
+        row = element.add_element 'row', {'no' => "#{index + 1}"}
+        fields_values_hash.each_pair do |k, v|
+          if k.to_s.downcase ==  'id'
+            k='mokucode'
+          end
+          add_field(row, ApiUtils.camelize_with_space(k.to_s), v, module_name)
+       end
+      end
+      r = self.class.post(create_url(module_name, 'updateRecords'),
+                          :query => {:newFormat => 1, :authtoken => @auth_token, :version => 4,
+                                     :scope => 'crmapi', :xmlData => x, :wfTrigger => 'true'},
+                          :headers => {'Content-length' => '0'})
+      check_for_errors(r)
+
+      x_r = REXML::Document.new(r.body).elements.to_a('//details')
+      to_hash(x_r, module_name)
     end
 
     def attach_file(module_name, record_id, file_path, file_name)
@@ -73,7 +113,8 @@ module ZohoApi
       # 4422 code is no records returned, not really an error
       # TODO: find out what 5000 is
       # 4800 code is returned when building an association. i.e Adding a product to a lead. Also this doesn't return a message
-      raise(RuntimeError, "Zoho Error Code #{code.text}: #{REXML::XPath.first(x, '//message').text}.") unless code.nil? || ['4422', '5000', '4800'].index(code.text)
+      # 2001 bulk update succedeed
+      raise(RuntimeError, "Zoho Error Code #{code.text}: #{REXML::XPath.first(x, '//message').text}.") unless code.nil? || ['4425', '4422', '5000', '4800', '2001'].index(code.text)
 
       return code.text unless code.nil?
       response.code
@@ -125,13 +166,28 @@ module ZohoApi
       field.downcase.gsub('id', '') != module_name.chop.downcase
     end
 
-    def related_records(parent_module, parent_record_id, related_module)
-      r = self.class.get(create_url("#{parent_module}", 'getRelatedRecords'),
-                         :query => {:newFormat => 1, :authtoken => @auth_token, :scope => 'crmapi',
-                                    :parentModule => parent_module, :id => parent_record_id})
+    def related_records(parent_module, parent_record_id, related_module, query_index_options = nil)
+      modified_query = query_index_options || { fromIndex: 1, toIndex: 200 }
+      query = {
+        query: {
+          newFormat: 1,
+          authtoken: @auth_token,
+          scope: 'crmapi',
+          parentModule: parent_module,
+          id: parent_record_id
+        }
+      }
+      query.fetch(:query).merge!(modified_query) #fromIndex: 1, toIndex: 200
+      r = self.class.get(create_url("#{related_module}", 'getRelatedRecords'), query)
 
-      x = REXML::Document.new(r.body).elements.to_a("/response/result/#{parent_module}/row")
+      x = REXML::Document.new(r.body).elements.to_a("/response/result/#{related_module}/row")
       check_for_errors(r)
+      to_hash(x, related_module)
+    end
+
+    def download_file(parent_module, attachment_id)
+      self.class.get(create_url("#{parent_module}", 'downloadFile'),
+        :query => {:authtoken => @auth_token, :scope => 'crmapi', :id => attachment_id})
     end
 
     def some(module_name, index = 1, number_of_records = nil, sort_column = :id, sort_order = :asc, last_modified_time = nil)
@@ -164,24 +220,18 @@ module ZohoApi
     end
 
     def update_record(module_name, id, fields_values_hash)
-      begin
-        x = REXML::Document.new
-        contacts = x.add_element module_name
-        row = contacts.add_element 'row', {'no' => '1'}
-        fields_values_hash.each_pair { |k, v| add_field(row, k, v, module_name) }
-        r = self.class.post(create_url(module_name, 'updateRecords'),
-                            :query => {:newFormat => 1, :authtoken => @auth_token,
-                                       :scope => 'crmapi', :id => id,
-                                       :xmlData => x, :wfTrigger => 'true'},
-                            :headers => {'Content-length' => '0'})
-        check_for_errors(r)
-        x_r = REXML::Document.new(r.body).elements.to_a('//recorddetail')
-        to_hash_with_id(x_r, module_name)[0]
-      rescue SystemCallError => e
-        Airbrake.notify(e)
-      rescue RuntimeError => e
-        puts "AGGIORNAMENTO FALLITO!"
-      end
+      x = REXML::Document.new
+      contacts = x.add_element module_name
+      row = contacts.add_element 'row', {'no' => '1'}
+      fields_values_hash.each_pair { |k, v| add_field(row, k, v, module_name) }
+      r = self.class.post(create_url(module_name, 'updateRecords'),
+                          :query => {:newFormat => 1, :authtoken => @auth_token,
+                                     :scope => 'crmapi', :id => id,
+                                     :xmlData => x, :wfTrigger => 'true'},
+                          :headers => {'Content-length' => '0'})
+      check_for_errors(r)
+      x_r = REXML::Document.new(r.body).elements.to_a('//recorddetail')
+      to_hash_with_id(x_r, module_name)[0]
     end
 
     def users(user_type = 'AllUsers')

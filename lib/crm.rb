@@ -40,15 +40,10 @@ class RubyZoho::Crm
   end
 
   def self.run_find_by_method(attrs, *args, &block)
-
     attrs = attrs.split('_and_')
     conditions = Array.new(args.size, '=')
-
-    #debugger
-
     h = RubyZoho.configuration.api.find_records(
-        #self.module_name, ApiUtils.string_to_symbol(attrs[0]), conditions[0], args[0]
-        self.module_name, ApiUtils.string_to_symbol(attrs[0]), conditions[0], ApiUtils.sanitize_string(args[0])
+        self.module_name, ApiUtils.string_to_symbol(attrs[0]), conditions[0], args[0]
     )
     return h.collect { |r| new(r) } unless h.nil?
     nil
@@ -68,7 +63,7 @@ class RubyZoho::Crm
 
   def self.setup_classes
     RubyZoho.configuration.crm_modules.each do |module_name|
-      klass_name = module_name.chop
+      klass_name = module_name.start_with?("CustomModule") ? module_name : module_name.chop
       c = Class.new(self) do
         include RubyZoho
         include ActiveModel
