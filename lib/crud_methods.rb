@@ -66,7 +66,28 @@
           arr.each_slice(100) do |slice|
             puts slice
             # convert each to field values hash
-            RubyZoho.configuration.api.bulk_update(self.module_name, slice)
+            begin
+              RubyZoho.configuration.api.bulk_update(self.module_name, slice)
+            rescue
+              puts "FALLBACK -> ROTTO TUTTO"
+              slice.each_slice(10) do |subslice|
+                begin
+                  RubyZoho.configuration.api.bulk_update(self.module_name, subslice)
+                rescue
+                  puts "FALLBACK -> ROTTO PROPRIO TUTTO"
+                  subslice.each do |subsubslice|
+                    begin
+                      RubyZoho.configuration.api.bulk_update(self.module_name, subsubslice)
+                    rescue => exception
+                      puts "QUELLO CHE ROMPE TUTTO"
+                      puts exception.backtrace
+                    end
+                  end
+                end
+
+              end
+            end
+
           end
 
           arr

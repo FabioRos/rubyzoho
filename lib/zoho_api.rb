@@ -81,6 +81,7 @@ module ZohoApi
                           :query => {:newFormat => 1, :authtoken => @auth_token, :version => 4,
                                      :scope => 'crmapi', :xmlData => x, :wfTrigger => 'true'},
                           :headers => {'Content-length' => '0'})
+      raise "LOL" if rand(3) == 2
       puts x
 
       check_for_errors(r)
