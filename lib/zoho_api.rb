@@ -81,8 +81,8 @@ module ZohoApi
                           :query => {:newFormat => 1, :authtoken => @auth_token, :version => 4,
                                      :scope => 'crmapi', :xmlData => x, :wfTrigger => 'true'},
                           :headers => {'Content-length' => '0'})
-      logger.info x
-      
+      puts x
+
       check_for_errors(r)
 
       x_r = REXML::Document.new(r.body).elements.to_a('//details')
