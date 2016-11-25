@@ -75,15 +75,12 @@ module ZohoApi
             k='mokucode'
           end
           add_field(row, ApiUtils.camelize_with_space(k.to_s), v, module_name)
-       end
+        end
       end
       r = self.class.post(create_url(module_name, 'updateRecords'),
                           :query => {:newFormat => 1, :authtoken => @auth_token, :version => 4,
                                      :scope => 'crmapi', :xmlData => x, :wfTrigger => 'true'},
                           :headers => {'Content-length' => '0'})
-      raise "LOL" if rand(3) == 2
-      puts x
-
       check_for_errors(r)
 
       x_r = REXML::Document.new(r.body).elements.to_a('//details')
@@ -118,6 +115,7 @@ module ZohoApi
       # TODO: find out what 5000 is
       # 4800 code is returned when building an association. i.e Adding a product to a lead. Also this doesn't return a message
       # 2001 bulk update succedeed
+      puts code
       raise(RuntimeError, "Zoho Error Code #{code.text}: #{REXML::XPath.first(x, '//message').text}.") unless code.nil? || ['4425', '4422', '5000', '4800', '2001'].index(code.text)
 
       return code.text unless code.nil?
@@ -173,13 +171,13 @@ module ZohoApi
     def related_records(parent_module, parent_record_id, related_module, query_index_options = nil)
       modified_query = query_index_options || { fromIndex: 1, toIndex: 200 }
       query = {
-        query: {
-          newFormat: 1,
-          authtoken: @auth_token,
-          scope: 'crmapi',
-          parentModule: parent_module,
-          id: parent_record_id
-        }
+          query: {
+              newFormat: 1,
+              authtoken: @auth_token,
+              scope: 'crmapi',
+              parentModule: parent_module,
+              id: parent_record_id
+          }
       }
       query.fetch(:query).merge!(modified_query) #fromIndex: 1, toIndex: 200
       r = self.class.get(create_url("#{related_module}", 'getRelatedRecords'), query)
@@ -191,7 +189,7 @@ module ZohoApi
 
     def download_file(parent_module, attachment_id)
       self.class.get(create_url("#{parent_module}", 'downloadFile'),
-        :query => {:authtoken => @auth_token, :scope => 'crmapi', :id => attachment_id})
+                     :query => {:authtoken => @auth_token, :scope => 'crmapi', :id => attachment_id})
     end
 
     def some(module_name, index = 1, number_of_records = nil, sort_column = :id, sort_order = :asc, last_modified_time = nil)
